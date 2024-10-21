@@ -55,17 +55,13 @@
 
     </style>
 </head>
+<script>const numColumns = 25;</script>
 <body>
     <table id="spider-table" class="display" style="width:100%">
         <tfoot>
             <tr>
                 <th></th>
-                <th></th>
-                <th></th>
-                <th></th>
-                <th></th>
-                <th></th>
-                <th></th>
+                <script>for (let i=0; i< numColumns; i++) document.write("<th></th>")</script>
             </tr>
         </tfoot>
     </table>
@@ -102,14 +98,13 @@
         ['logs', 'Spider error logs'],
     ];
     const GITHUB_URL = "https://github.com/alltheplaces/alltheplaces/tree/master";
-    let NUM_BUILDS = 5; // Maximum number of builds to display.
     const URL_QUERY_PARAMS = getUrlQueryParams();
 
     function calculateStability(row) {
         // Normalise the POI count data such that each run outputs the same maximum number.
         let NORMALISED_MAX_POIS = 10000.0
         let maxFeatures = 0;
-        for (let i = 2; i <= NUM_BUILDS + 1; i++) {
+        for (let i = 2; i <= numColumns + 1; i++) {
             if (row[i] > maxFeatures) {
                 maxFeatures = row[i]
             }
@@ -119,7 +114,7 @@
             let sumSqDeviations = 0;
             let runCount = 0;
             // Calculate the variance from the MAXIMUM value for each (normalised count) run that occurred.
-            for (let i = 2; i <= NUM_BUILDS + 1; i++) {
+            for (let i = 2; i <= numColumns + 1; i++) {
                 if (row[i] != null) {
                     let dev = NORMALISED_MAX_POIS - (multiplier * row[i]);
                     sumSqDeviations += (dev * dev);
@@ -134,14 +129,15 @@
 
     // Fetch the stats JSON for a particular run.
     async function fetchStatsForHistoryListEntry(entry) {
-        const statsResponse = await window.fetch(entry["stats_url"])
+        const statsResponse = await window.fetch(`https://corsproxy.io/?${encodeURIComponent(entry["stats_url"])}`)
         const stats = await statsResponse.json()
         stats["name"] = entry["name"]
         return stats
     }
 
-    const historyList = await fetchHistoryList();
-    historyList.splice(NUM_BUILDS)
+    let historyList = await fetchHistoryList();
+    const offset = 0;
+    historyList = historyList.slice(offset, offset + numColumns);
     console.log(historyList)
     // Fetch the stats JSON for the runs we will be rendering.
     const statsList = await Promise.all(historyList.map(fetchStatsForHistoryListEntry))
@@ -231,7 +227,7 @@
                 className: 'dt-center', targets: [1]
             },
             {
-                className: 'dt-right', targets: [2,3,4,5,6]
+                className: 'dt-right', targets: Array.from({length: numColumns}, (_, i) => i + 2),
             },
             {
                 targets: statsList.map((_, i) => i + 2),
@@ -243,7 +239,7 @@
         "footerCallback": function (row, data, start, end, display) {
             let api = this.api()
             // Total up the numeric columns (all next to each)
-            let columns = [2,3,4,5,6]
+            let columns = Array.from({length: numColumns}, (_, i) => i + 2);
             for (let i in columns) {
                 let total = api
                     .column(columns[i], {filter: "applied"})
@@ -256,7 +252,7 @@
             }
         },
         "rowCallback": function(row, data, displayNum, displayIndex, dataIndex) {
-            for (let i = 2; i <= 7; i++) {
+            for (let i = 2; i <= numColumns + 2; i++) {
                 if (data[i] || data[i] === 0) {
                     let linkUrl = null
                     if ((linkFormat === "map") && historyList[i - 2]["output_url"]) {
